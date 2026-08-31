@@ -1,0 +1,6 @@
+{
+  "name": "The Workshop",
+  "description": "Visual node-based development environment and Logos/Theos code generator for iOS jailbreak tweaks with Gemini AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Deep OLED & Engineering Workbench Palettes */
+  .bg-oled-black {
+    background-color: #020408;
+  }
+  
+  .bg-graphite-dark {
+    background-color: #070b12;
+  }
+  
+  .bg-graphite-panel {
+    background-color: #0b101a;
+  }
+
+  .bg-[#121824] {
+    background-color: #121824;
+  }
+
+  /* Brushed Steel & Metallic Surfaces */
+  .bg-brushed-steel {
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 100%),
+                      linear-gradient(to right, #111722, #182232, #111722);
+  }
+
+  .bg-brushed-metal-header {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.3) 100%), #121824;
+  }
+
+  /* Blueprint Desk Radial Glow Background */
+  .bg-blueprint-workbench {
+    background-color: #02050a;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.07) 0%, rgba(57, 255, 20, 0.03) 45%, transparent 75%),
+      linear-gradient(to right, rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  }
+
+  /* Thin Glowing Borders */
+  .border-cyan-glow {
+    border-color: rgba(0, 240, 255, 0.4);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15), inset 0 0 10px rgba(0, 240, 255, 0.05);
+  }
+
+  .border-neon-glow {
+    border-color: rgba(57, 255, 20, 0.4);
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.15), inset 0 0 10px rgba(57, 255, 20, 0.05);
+  }
+
+  .glow-cyan-lg {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.25), 0 0 40px rgba(0, 240, 255, 0.1);
+  }
+
+  .glow-neon-lg {
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.25), 0 0 40px rgba(57, 255, 20, 0.1);
+  }
+
+  /* Technical Scanlines Effect */
+  .scanlines {
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0),
+      rgba(255,255,255,0) 50%,
+      rgba(0, 0, 0, 0.25) 50%,
+      rgba(0, 0, 0, 0.25)
+    );
+    background-size: 100% 4px;
+  }
+}
+
+/* Custom Circuit Pulse Animation */
+@keyframes circuitPulse {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-circuit-flow {
+  animation: circuitPulse 1.2s linear infinite;
+}
+
+@keyframes laserGlow {
+  0%, 100% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 4px #00F0FF);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #00F0FF);
+  }
+}
+
+.animate-laser-glow {
+  animation: laserGlow 2s ease-in-out infinite;
+}
+
+/* Custom Technical Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #04070d;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00F0FF;
+}
