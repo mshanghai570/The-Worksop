@@ -94,7 +94,7 @@ public struct BinaryInfo: Codable, Equatable {
 public struct PatchOperation: Identifiable, Codable {
     public let id: String
     public let functionName: String
-    public let patchType: PatchType
+    public let patchType: AIService.PatchType
     public let originalCode: String?
     public let patchedCode: String
     public let address: UInt64?
@@ -104,7 +104,7 @@ public struct PatchOperation: Identifiable, Codable {
     public init(
         id: String = UUID().uuidString,
         functionName: String,
-        patchType: PatchType,
+        patchType: AIService.PatchType,
         originalCode: String? = nil,
         patchedCode: String,
         address: UInt64? = nil,
@@ -156,6 +156,154 @@ public struct FunctionHook: Identifiable, Codable {
     }
 }
 
+// MARK: - Inline Edit Models
+
+public struct InlineEditPatch: Identifiable, Codable {
+    public let id: String
+    public let address: UInt64
+    public let originalBytes: Data
+    public let newBytes: Data
+    public let size: Int
+    public let patchMode: AIService.PatchMode
+    public let isApplied: Bool
+    public let label: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        address: UInt64,
+        originalBytes: Data,
+        newBytes: Data,
+        size: Int,
+        patchMode: AIService.PatchMode = .absolute,
+        isApplied: Bool = false,
+        label: String? = nil
+    ) {
+        self.id = id
+        self.address = address
+        self.originalBytes = originalBytes
+        self.newBytes = newBytes
+        self.size = size
+        self.patchMode = patchMode
+        self.isApplied = isApplied
+        self.label = label
+    }
+
+    public var originalHex: String {
+        originalBytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+
+    public var newHex: String {
+        newBytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+}
+
+// MARK: - Byte Patch Models
+
+public struct BytePatch: Identifiable, Codable {
+    public let id: String
+    public let address: UInt64
+    public let operation: AIService.BytePatchOperation
+    public let operand: Data?
+    public let value: UInt64?
+    public let size: Int
+    public let isApplied: Bool
+    public let label: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        address: UInt64,
+        operation: AIService.BytePatchOperation,
+        operand: Data? = nil,
+        value: UInt64? = nil,
+        size: Int = 1,
+        isApplied: Bool = false,
+        label: String? = nil
+    ) {
+        self.id = id
+        self.address = address
+        self.operation = operation
+        self.operand = operand
+        self.value = value
+        self.size = size
+        self.isApplied = isApplied
+        self.label = label
+    }
+}
+
+// MARK: - Disassembly Models
+
+public struct Instruction: Identifiable, Codable, Equatable {
+    public let id: String
+    public let address: UInt64
+    public let mnemonic: String
+    public let operands: [String]
+    public let bytes: Data
+    public let size: Int
+    public let isBranch: Bool
+    public let branchTarget: UInt64?
+    public let comment: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        address: UInt64,
+        mnemonic: String,
+        operands: [String] = [],
+        bytes: Data = Data(),
+        size: Int = 0,
+        isBranch: Bool = false,
+        branchTarget: UInt64? = nil,
+        comment: String? = nil
+    ) {
+        self.id = id
+        self.address = address
+        self.mnemonic = mnemonic
+        self.operands = operands
+        self.bytes = bytes
+        self.size = size
+        self.isBranch = isBranch
+        self.branchTarget = branchTarget
+        self.comment = comment
+    }
+
+    public var hexBytes: String {
+        bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+
+    public var fullDisassembly: String {
+        var parts: [String] = [mnemonic]
+        if !operands.isEmpty {
+            parts.append(operands.joined(separator: ", "))
+        }
+        return parts.joined(separator: " ")
+    }
+}
+
+public struct DisassemblyBlock: Identifiable, Codable {
+    public let id: String
+    public let startAddress: UInt64
+    public let endAddress: UInt64
+    public let instructions: [Instruction]
+    public let functionName: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        startAddress: UInt64,
+        endAddress: UInt64,
+        instructions: [Instruction] = [],
+        functionName: String? = nil
+    ) {
+        self.id = id
+        self.startAddress = startAddress
+        self.endAddress = endAddress
+        self.instructions = instructions
+        self.functionName = functionName
+    }
+
+    public var size: Int {
+        Int(endAddress - startAddress)
+    }
+}
+
 public enum HookType: String, Codable, CaseIterable {
     case before
     case after
@@ -171,6 +319,10 @@ public class BinaryPatchingService: ObservableObject {
     @Published public private(set) var isAnalyzing: Bool = false
     @Published public private(set) var patches: [PatchOperation] = []
     @Published public private(set) var hooks: [FunctionHook] = []
+    @Published public private(set) var inlineEdits: [InlineEditPatch] = []
+    @Published public private(set) var bytePatches: [BytePatch] = []
+    @Published public private(set) var disassembly: [DisassemblyBlock] = []
+    @Published public private(set) var selectedFunctionDisassembly: [Instruction] = []
     @Published public private(set) var lastError: String?
 
     private let fileManager = FileManager.default
@@ -447,7 +599,7 @@ public class BinaryPatchingService: ObservableObject {
 
     private func generatePatchCode(
         functionName: String,
-        patchType: PatchType,
+        patchType: AIService.PatchType,
         className: String? = nil,
         methodSignature: String? = nil
     ) async throws -> String {
@@ -652,12 +804,182 @@ public class BinaryPatchingService: ObservableObject {
         return binary.classes.filter { $0.localizedCaseInsensitiveContains(query) }
     }
 
+    // MARK: - Inline Editing
+
+    public func createInlineEdit(
+        address: UInt64,
+        originalBytes: Data,
+        newBytes: Data,
+        patchMode: AIService.PatchMode = .absolute,
+        label: String? = nil
+    ) -> InlineEditPatch {
+        let edit = InlineEditPatch(
+            address: address,
+            originalBytes: originalBytes,
+            newBytes: newBytes,
+            size: newBytes.count,
+            patchMode: patchMode,
+            label: label
+        )
+        inlineEdits.append(edit)
+        return edit
+    }
+
+    public func applyInlineEdit(_ editId: String) -> Bool {
+        guard let index = inlineEdits.firstIndex(where: { $0.id == editId }) else {
+            return false
+        }
+        inlineEdits[index].isApplied = true
+        return true
+    }
+
+    public func removeInlineEdit(_ editId: String) -> Bool {
+        guard let index = inlineEdits.firstIndex(where: { $0.id == editId }) else {
+            return false
+        }
+        inlineEdits.remove(at: index)
+        return true
+    }
+
+    // MARK: - Byte Patching
+
+    public func createBytePatch(
+        address: UInt64,
+        operation: AIService.BytePatchOperation,
+        operand: Data? = nil,
+        value: UInt64? = nil,
+        size: Int = 1,
+        label: String? = nil
+    ) -> BytePatch {
+        let patch = BytePatch(
+            address: address,
+            operation: operation,
+            operand: operand,
+            value: value,
+            size: size,
+            label: label
+        )
+        bytePatches.append(patch)
+        return patch
+    }
+
+    public func applyBytePatch(_ patchId: String) -> Bool {
+        guard let index = bytePatches.firstIndex(where: { $0.id == patchId }) else {
+            return false
+        }
+        bytePatches[index].isApplied = true
+        return true
+    }
+
+    public func removeBytePatch(_ patchId: String) -> Bool {
+        guard let index = bytePatches.firstIndex(where: { $0.id == patchId }) else {
+            return false
+        }
+        bytePatches.remove(at: index)
+        return true
+    }
+
+    // MARK: - Disassembly
+
+    public func disassembleFunction(at address: UInt64, size: Int? = nil) async throws -> [Instruction] {
+        guard let binary = loadedBinary else {
+            throw NSError(domain: "BinaryPatchingService", code: 3, userInfo: [NSLocalizedDescriptionKey: "No binary loaded"])
+        }
+
+        // Use AI to disassemble
+        if aiService.configuration.isConfigured {
+            return try await disassembleWithAI(address: address, size: size)
+        }
+
+        // Return placeholder for now
+        return []
+    }
+
+    private func disassembleWithAI(address: UInt64, size: Int? = nil) async throws -> [Instruction] {
+        let systemPrompt = """
+        You are an expert reverse engineer. Disassemble ARM64 machine code into readable assembly instructions.
+        
+        Format each instruction as JSON:
+        {
+            "address": 123456,
+            "mnemonic": "mov",
+            "operands": ["x0", "#0x10"],
+            "bytes": [0xFD, 0x7B, 0x02, 0xA9],
+            "size": 4,
+            "isBranch": false,
+            "branchTarget": null,
+            "comment": null
+        }
+        
+        Return an array of instruction objects.
+        """
+
+        let sizeDesc = size != nil ? "\(size!) bytes" : "unknown size"
+        let userPrompt = """
+        Disassemble ARM64 code at address 0x\(String(format: "%llX", address)) (\(sizeDesc)).
+        
+        Provide the disassembly as a JSON array of instruction objects.
+        """
+
+        let messages = [
+            AIChatMessage(role: "system", content: systemPrompt),
+            AIChatMessage(role: "user", content: userPrompt)
+        ]
+
+        let response = try await aiService.sendChatMessage(messages: messages)
+        
+        guard let choice = response.choices.first else {
+            throw AIError.invalidResponse
+        }
+
+        let jsonString = choice.message.content
+        
+        // Parse the JSON response
+        if let data = jsonString.data(using: .utf8) {
+            do {
+                let instructions = try JSONDecoder().decode([Instruction].self, from: data)
+                return instructions
+            } catch {
+                // Try to extract from markdown code block
+                if let cleaned = jsonString.components(separatedBy: "```json").last?.components(separatedBy: "```").first,
+                   let cleanData = cleaned.data(using: .utf8) {
+                    let instructions = try JSONDecoder().decode([Instruction].self, from: cleanData)
+                    return instructions
+                }
+                throw AIError.parsingError
+            }
+        }
+        
+        throw AIError.parsingError
+    }
+
+    public func disassembleFunction(_ function: BinaryFunction) async throws -> [Instruction] {
+        try await disassembleFunction(at: function.address, size: Int(function.size))
+    }
+
+    public func clearInlineEdits() {
+        inlineEdits.removeAll()
+    }
+
+    public func clearBytePatches() {
+        bytePatches.removeAll()
+    }
+
+    public func clearDisassembly() {
+        disassembly.removeAll()
+        selectedFunctionDisassembly.removeAll()
+    }
+
     // MARK: - Utility
 
     public func unloadBinary() {
         loadedBinary = nil
         patches.removeAll()
         hooks.removeAll()
+        inlineEdits.removeAll()
+        bytePatches.removeAll()
+        disassembly.removeAll()
+        selectedFunctionDisassembly.removeAll()
     }
 
     public func getFunctionInfo(name: String) -> BinaryFunction? {
@@ -667,5 +989,32 @@ public class BinaryPatchingService: ObservableObject {
 
         return binary.functions.first { $0.name == name } ?? 
                binary.functions.first { $0.displayName == name }
+    }
+
+    // MARK: - Byte Reading/Writing Helpers
+
+    public func readBytes(at address: UInt64, count: Int) -> Data? {
+        guard let binary = loadedBinary else {
+            return nil
+        }
+
+        do {
+            let url = URL(fileURLWithPath: binary.path)
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { handle.closeFile() }
+
+            handle.seek(toFileOffset: UInt64(address))
+            let data = handle.readData(ofLength: count)
+            return data
+        } catch {
+            return nil
+        }
+    }
+
+    public func getBytesAsHex(at address: UInt64, count: Int) -> String? {
+        guard let data = readBytes(at: address, count: count) else {
+            return nil
+        }
+        return data.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 }

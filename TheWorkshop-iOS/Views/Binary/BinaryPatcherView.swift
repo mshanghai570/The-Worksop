@@ -1,7 +1,7 @@
 //
 //  Views/Binary/BinaryPatcherView.swift
 //  TheWorkshop-iOS
-//  Binary Loading & Function Patching Interface
+//  Binary Loading & Function Patching Interface with Inline Edits and Byte Patching
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ public struct BinaryPatcherView: View {
     @State private var isShowingFileImporter: Bool = false
     @State private var searchQuery: String = ""
     @State private var selectedFunction: BinaryFunction?
-    @State private var selectedPatchType: PatchType = .hook
+    @State private var selectedPatchType: AIService.PatchType = .hook
     @State private var customPatchCode: String = ""
     @State private var isGeneratingPatch: Bool = false
     @State private var showPatchDetail: Bool = false
@@ -26,6 +26,29 @@ public struct BinaryPatcherView: View {
     @State private var hookCallbackCode: String = "NSLog(@\"Hook executed\");"
     @State private var isClassMethod: Bool = false
     @State private var hookType: HookType = .before
+    
+    // Inline Edit State
+    @State private var showInlineEditCreator: Bool = false
+    @State private var inlineEditAddress: String = ""
+    @State private var inlineEditOriginalBytes: String = ""
+    @State private var inlineEditNewBytes: String = ""
+    @State private var inlineEditLabel: String = ""
+    @State private var inlineEditMode: AIService.PatchMode = .absolute
+    
+    // Byte Patch State
+    @State private var showBytePatchCreator: Bool = false
+    @State private var bytePatchAddress: String = ""
+    @State private var bytePatchOperation: AIService.BytePatchOperation = .replace
+    @State private var bytePatchOperand: String = ""
+    @State private var bytePatchValue: String = ""
+    @State private var bytePatchSize: String = "1"
+    @State private var bytePatchLabel: String = ""
+    
+    // Disassembly State
+    @State private var showDisassembly: Bool = false
+    @State private var disassemblyInstructions: [Instruction] = []
+    @State private var selectedInstruction: Instruction?
+    @State private var isDisassembling: Bool = false
 
     public var body: some View {
         NavigationView {
@@ -40,7 +63,7 @@ public struct BinaryPatcherView: View {
                     
                     Spacer()
                     
-                    if binaryService.isLoading || binaryService.isAnalyzing {
+                    if binaryService.isLoading || binaryService.isAnalyzing || isDisassembling {
                         ProgressView()
                             .scaleEffect(0.8)
                     }
@@ -74,6 +97,81 @@ public struct BinaryPatcherView: View {
                         .background(WorkshopTheme.neonGreen.opacity(0.1))
                         .cornerRadius(8)
                         
+                        // Action Buttons
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                Button(action: { showHookCreator = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "plus")
+                                        Text("Hook")
+                                    }
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(WorkshopTheme.cyberCyan)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(6)
+                                }
+
+                                Button(action: { showInlineEditCreator = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "pencil")
+                                        Text("Inline Edit")
+                                    }
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(WorkshopTheme.hotPink)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(6)
+                                }
+
+                                Button(action: { showBytePatchCreator = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "hexagon.fill")
+                                        Text("Byte Patch")
+                                    }
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(WorkshopTheme.warningYellow)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(6)
+                                }
+
+                                Button(action: disassembleSelectedFunction) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "list.bullet.rectangle.fill")
+                                        Text("Disassemble")
+                                    }
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(WorkshopTheme.neonGreen)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(6)
+                                }
+                                .disabled(selectedFunction == nil)
+
+                                Button(action: { showPatchDetail = false; selectedPatch = nil }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "list.bullet")
+                                        Text("Patches")
+                                    }
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(WorkshopTheme.darkCard)
+                                    .foregroundColor(WorkshopTheme.brightText)
+                                    .cornerRadius(6)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
+                        
                         HStack(spacing: 12) {
                             VStack {
                                 Text("\(binary.functions.count)")
@@ -103,19 +201,6 @@ public struct BinaryPatcherView: View {
                             }
                             
                             Spacer()
-                            
-                            Button(action: { showHookCreator = true }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "plus")
-                                    Text("Add Hook")
-                                }
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(WorkshopTheme.cyberCyan)
-                                .foregroundColor(.black)
-                                .cornerRadius(6)
-                            }
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
@@ -205,172 +290,19 @@ public struct BinaryPatcherView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let binary = binaryService.loadedBinary, !searchQuery.isEmpty {
                         // Search Results
-                        ScrollView {
-                            if let selectedFunction = selectedFunction {
-                                FunctionDetailView(
-                                    function: selectedFunction,
-                                    onPatch: { patchType, code in
-                                        selectedPatchType = patchType
-                                        customPatchCode = code
-                                        createPatch()
-                                    },
-                                    onCancel: { selectedFunction = nil }
-                                )
-                                .padding(12)
-                            } else {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    // Function Results
-                                    if !binaryService.searchFunctions(query: searchQuery).isEmpty {
-                                        Text("Functions")
-                                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                            .foregroundColor(WorkshopTheme.neonGreen)
-                                            .padding(.horizontal, 12)
-                                        
-                                        ForEach(binaryService.searchFunctions(query: searchQuery)) { func in
-                                            FunctionRow(
-                                                function: func,
-                                                isSelected: selectedFunction?.id == func.id,
-                                                onSelect: { selectedFunction = func }
-                                            )
-                                        }
-                                    }
-
-                                    // Class Results
-                                    if !binaryService.searchClasses(query: searchQuery).isEmpty {
-                                        Text("Classes")
-                                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                            .foregroundColor(WorkshopTheme.cyberCyan)
-                                            .padding(.horizontal, 12)
-                                        
-                                        ForEach(binaryService.searchClasses(query: searchQuery), id: \.self) { className in
-                                            ClassRow(
-                                                className: className,
-                                                onSelect: { 
-                                                    // Find functions in this class
-                                                    let classFunctions = binary.functions.filter { $0.className == className }
-                                                    if let firstFunc = classFunctions.first {
-                                                        selectedFunction = firstFunc
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    // Symbol Results
-                                    if !binaryService.searchSymbols(query: searchQuery).isEmpty {
-                                        Text("Symbols")
-                                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                            .foregroundColor(WorkshopTheme.hotPink)
-                                            .padding(.horizontal, 12)
-                                        
-                                        ForEach(binaryService.searchSymbols(query: searchQuery), id: \.self) { symbol in
-                                            SymbolRow(symbol: symbol)
-                                        }
-                                    }
-
-                                    if binaryService.searchFunctions(query: searchQuery).isEmpty &&
-                       binaryService.searchClasses(query: searchQuery).isEmpty &&
-                       binaryService.searchSymbols(query: searchQuery).isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 24))
-                                .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
-                            Text("No results found for \"\(searchQuery)\"")
-                                .font(.system(size: 12))
-                                .foregroundColor(WorkshopTheme.subtleText)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                                }
-                                .padding(.vertical, 12)
-                            }
-                        }
+                        showSearchResults(in: binary)
                     } else if let binary = binaryService.loadedBinary {
                         // Show all functions when no search
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 12) {
-                                if !binary.classes.isEmpty {
-                                    Text("Classes")
-                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                        .foregroundColor(WorkshopTheme.cyberCyan)
-                                        .padding(.horizontal, 12)
-                                    
-                                    LazyVStack(spacing: 4) {
-                                        ForEach(binary.classes, id: \.self) { className in
-                                            ClassRow(
-                                                className: className,
-                                                onSelect: { 
-                                                    let classFunctions = binary.functions.filter { $0.className == className }
-                                                    if let firstFunc = classFunctions.first {
-                                                        selectedFunction = firstFunc
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                if !binary.functions.isEmpty {
-                                    Text("Functions")
-                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                        .foregroundColor(WorkshopTheme.neonGreen)
-                                        .padding(.horizontal, 12)
-                                    
-                                    LazyVStack(spacing: 4) {
-                                        ForEach(binary.functions) { func in
-                                            FunctionRow(
-                                                function: func,
-                                                isSelected: selectedFunction?.id == func.id,
-                                                onSelect: { selectedFunction = func }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                if binary.functions.isEmpty && binary.classes.isEmpty {
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "binarycoding")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
-                                        Text("Binary loaded but no functions extracted")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(WorkshopTheme.subtleText)
-                                        Text("Use AI analysis for better results")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(WorkshopTheme.subtleText.opacity(0.6))
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                }
-                            }
-                            .padding(.vertical, 12)
-                        }
+                        showAllContent(in: binary)
                     } else {
                         // Empty state
-                        VStack(spacing: 12) {
-                            Image(systemName: "binarycoding")
-                                .font(.system(size: 32))
-                                .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
-                            Text("Load a binary to start patching")
-                                .font(.system(size: 13, design: .monospaced))
-                                .foregroundColor(WorkshopTheme.subtleText)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        showEmptyState()
                     }
                 }
             }
             .background(WorkshopTheme.deepBackground)
             .navigationTitle("Binary Patcher")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if binaryService.loadedBinary != nil {
-                        Button(action: { showPatchDetail = false; selectedPatch = nil }) {
-                            Image(systemName: "list.bullet")
-                        }
-                        .disabled(!showPatchDetail)
-                    }
-                }
-            }
         }
         .preferredColorScheme(.dark)
         
@@ -382,28 +314,13 @@ public struct BinaryPatcherView: View {
                                    UTType(filenameExtension: "app", conformingTo: .folder)],
             allowsMultipleSelection: false
         ) { result in
-            switch result {
-            case .success(let urls):
-                if let url = urls.first {
-                    Task {
-                        do {
-                            try await binaryService.loadBinary(at: url.path)
-                        } catch {
-                            // Show error
-                        }
-                    }
-                }
-            case .failure(let error):
-                print("Error importing: \(error)")
-            }
+            handleFileImport(result: result)
         }
         
-        // Patch Detail Sheet
+        // Sheets
         .sheet(item: $selectedPatch) { patch in
             PatchDetailView(patch: patch)
         }
-        
-        // Hook Creator Sheet
         .sheet(isPresented: $showHookCreator) {
             HookCreatorView(
                 className: $hookClassName,
@@ -414,13 +331,236 @@ public struct BinaryPatcherView: View {
                 onCreate: createHook
             )
         }
+        .sheet(isPresented: $showInlineEditCreator) {
+            InlineEditCreatorView(
+                address: $inlineEditAddress,
+                originalBytes: $inlineEditOriginalBytes,
+                newBytes: $inlineEditNewBytes,
+                label: $inlineEditLabel,
+                mode: $inlineEditMode,
+                onCreate: createInlineEdit
+            )
+        }
+        .sheet(isPresented: $showBytePatchCreator) {
+            BytePatchCreatorView(
+                address: $bytePatchAddress,
+                operation: $bytePatchOperation,
+                operand: $bytePatchOperand,
+                value: $bytePatchValue,
+                size: $bytePatchSize,
+                label: $bytePatchLabel,
+                onCreate: createBytePatch
+            )
+        }
+        .sheet(isPresented: $showDisassembly) {
+            DisassemblyView(
+                instructions: disassemblyInstructions,
+                selectedInstruction: $selectedInstruction,
+                onPatchAtAddress: { address in
+                    bytePatchAddress = String(format: "%llX", address)
+                    showBytePatchCreator = true
+                    showDisassembly = false
+                }
+            )
+        }
+    }
+
+    // MARK: - View Builders
+
+    @ViewBuilder
+    private func showSearchResults(in binary: BinaryInfo) -> some View {
+        ScrollView {
+            if let selectedFunction = selectedFunction {
+                FunctionDetailView(
+                    function: selectedFunction,
+                    onPatch: { patchType, code in
+                        selectedPatchType = patchType
+                        customPatchCode = code
+                        createPatch()
+                    },
+                    onDisassemble: disassembleSelectedFunction,
+                    onCancel: { selectedFunction = nil }
+                )
+                .padding(12)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Function Results
+                    if !binaryService.searchFunctions(query: searchQuery).isEmpty {
+                        showSection(title: "Functions", color: WorkshopTheme.neonGreen) {
+                            ForEach(binaryService.searchFunctions(query: searchQuery)) { func in
+                                FunctionRow(
+                                    function: func,
+                                    isSelected: selectedFunction?.id == func.id,
+                                    onSelect: { selectedFunction = func }
+                                )
+                            }
+                        }
+                    }
+
+                    // Class Results
+                    if !binaryService.searchClasses(query: searchQuery).isEmpty {
+                        showSection(title: "Classes", color: WorkshopTheme.cyberCyan) {
+                            ForEach(binaryService.searchClasses(query: searchQuery), id: \.self) { className in
+                                ClassRow(
+                                    className: className,
+                                    onSelect: { 
+                                        let classFunctions = binary.functions.filter { $0.className == className }
+                                        if let firstFunc = classFunctions.first {
+                                            selectedFunction = firstFunc
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Symbol Results
+                    if !binaryService.searchSymbols(query: searchQuery).isEmpty {
+                        showSection(title: "Symbols", color: WorkshopTheme.hotPink) {
+                            ForEach(binaryService.searchSymbols(query: searchQuery), id: \.self) { symbol in
+                                SymbolRow(symbol: symbol)
+                            }
+                        }
+                    }
+
+                    if allEmpty() {
+                        showEmptySearchResults()
+                    }
+                }
+                .padding(.vertical, 12)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func showAllContent(in binary: BinaryInfo) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if !binary.classes.isEmpty {
+                    showSection(title: "Classes", color: WorkshopTheme.cyberCyan) {
+                        LazyVStack(spacing: 4) {
+                            ForEach(binary.classes, id: \.self) { className in
+                                ClassRow(
+                                    className: className,
+                                    onSelect: { 
+                                        let classFunctions = binary.functions.filter { $0.className == className }
+                                        if let firstFunc = classFunctions.first {
+                                            selectedFunction = firstFunc
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if !binary.functions.isEmpty {
+                    showSection(title: "Functions", color: WorkshopTheme.neonGreen) {
+                        LazyVStack(spacing: 4) {
+                            ForEach(binary.functions) { func in
+                                FunctionRow(
+                                    function: func,
+                                    isSelected: selectedFunction?.id == func.id,
+                                    onSelect: { selectedFunction = func }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if binary.functions.isEmpty && binary.classes.isEmpty {
+                    showEmptyBinary()
+                }
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    @ViewBuilder
+    private func showEmptyState() -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "binarycoding")
+                .font(.system(size: 32))
+                .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
+            Text("Load a binary to start patching")
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundColor(WorkshopTheme.subtleText)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func showEmptySearchResults() -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 24))
+                .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
+            Text("No results found for \"\(searchQuery)\"")
+                .font(.system(size: 12))
+                .foregroundColor(WorkshopTheme.subtleText)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func showEmptyBinary() -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "binarycoding")
+                .font(.system(size: 24))
+                .foregroundColor(WorkshopTheme.subtleText.opacity(0.4))
+            Text("Binary loaded but no functions extracted")
+                .font(.system(size: 12))
+                .foregroundColor(WorkshopTheme.subtleText)
+            Text("Use AI analysis for better results")
+                .font(.system(size: 10))
+                .foregroundColor(WorkshopTheme.subtleText.opacity(0.6))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func showSection<Content: View>(title: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(color)
+                .padding(.horizontal, 12)
+            
+            content()
+                .padding(.horizontal, 12)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func allEmpty() -> Bool {
+        binaryService.searchFunctions(query: searchQuery).isEmpty &&
+        binaryService.searchClasses(query: searchQuery).isEmpty &&
+        binaryService.searchSymbols(query: searchQuery).isEmpty
+    }
+
+    private func handleFileImport(result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            if let url = urls.first {
+                Task {
+                    do {
+                        try await binaryService.loadBinary(at: url.path)
+                    } catch {
+                        print("Error loading binary: \(error)")
+                    }
+                }
+            }
+        case .failure(let error):
+            print("Error importing: \(error)")
+        }
     }
 
     private func loadSampleBinary() {
         Task {
-            // Create a sample binary info for demonstration
             let sampleFunctions = [
                 BinaryFunction(
+                    id: UUID().uuidString,
                     name: "lockUIFromSource:withOptions:",
                     address: 0x100004000,
                     size: 256,
@@ -430,6 +570,7 @@ public struct BinaryPatcherView: View {
                     parameterTypes: ["long long", "id"]
                 ),
                 BinaryFunction(
+                    id: UUID().uuidString,
                     name: "applicationDidFinishLaunching:",
                     address: 0x100005000,
                     size: 128,
@@ -439,6 +580,7 @@ public struct BinaryPatcherView: View {
                     parameterTypes: ["id"]
                 ),
                 BinaryFunction(
+                    id: UUID().uuidString,
                     name: "touchesBegan:withEvent:",
                     address: 0x100006000,
                     size: 96,
@@ -467,6 +609,7 @@ public struct BinaryPatcherView: View {
         binaryService.unloadBinary()
         selectedFunction = nil
         searchQuery = ""
+        disassemblyInstructions = []
     }
 
     private func createPatch() {
@@ -483,7 +626,7 @@ public struct BinaryPatcherView: View {
                 selectedPatch = patch
                 showPatchDetail = true
             } catch {
-                // Show error
+                print("Error creating patch: \(error)")
             }
             isGeneratingPatch = false
         }
@@ -501,463 +644,91 @@ public struct BinaryPatcherView: View {
                 )
                 
                 // Clear and close
-                hookClassName = ""
-                hookMethodName = ""
-                hookCallbackCode = "NSLog(@\"Hook executed\");"
-                isClassMethod = false
-                hookType = .before
+                resetHookCreator()
                 showHookCreator = false
                 
             } catch {
-                // Show error
+                print("Error creating hook: \(error)")
             }
         }
     }
-}
 
-// MARK: - Subviews
-
-struct FunctionRow: View {
-    let function: BinaryFunction
-    let isSelected: Bool
-    let onSelect: () -> Void
-
-    var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    if let className = function.className {
-                        Text(className)
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.cyberCyan)
-                    }
-                    Text(function.name)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(WorkshopTheme.brightText)
-                    Spacer()
-                    Text("0x\(String(format: "%llX", function.address))")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(WorkshopTheme.subtleText)
-                }
-                
-                if let methodSignature = function.methodSignature {
-                    Text(methodSignature)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(WorkshopTheme.subtleText)
-                }
-            }
-            .padding(10)
-            .background(isSelected ? WorkshopTheme.neonGreen.opacity(0.15) : WorkshopTheme.darkCard)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? WorkshopTheme.neonGreen : WorkshopTheme.cardBorder, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct ClassRow: View {
-    let className: String
-    let onSelect: () -> Void
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 8) {
-                Image(systemName: "cube.fill")
-                    .foregroundColor(WorkshopTheme.cyberCyan)
-                Text(className)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(WorkshopTheme.brightText)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(WorkshopTheme.subtleText)
-            }
-            .padding(10)
-            .background(WorkshopTheme.darkCard)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct SymbolRow: View {
-    let symbol: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "terminal.fill")
-                .foregroundColor(WorkshopTheme.hotPink)
-            Text(symbol)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(WorkshopTheme.brightText)
-        }
-        .padding(10)
-        .background(WorkshopTheme.darkCard)
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-        )
-    }
-}
-
-struct FunctionDetailView: View {
-    let function: BinaryFunction
-    let onPatch: (PatchType, String) -> Void
-    let onCancel: () -> Void
-
-    @State private var selectedPatchType: PatchType = .hook
-    @State private var customCode: String = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "function")
-                    .foregroundColor(WorkshopTheme.neonGreen)
-                Text("FUNCTION DETAIL")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(WorkshopTheme.subtleText)
-                Spacer()
-                Button(action: onCancel) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(WorkshopTheme.subtleText)
-                }
-            }
-
-            Divider().background(WorkshopTheme.cardBorder)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(function.displayName)
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundColor(WorkshopTheme.neonGreen)
-                
-                if let methodSignature = function.methodSignature {
-                    Text(methodSignature)
-                        .font(.system(size: 13, design: .monospaced))
-                        .foregroundColor(WorkshopTheme.cyberCyan)
-                }
-                
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading) {
-                        Text("Address")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.subtleText)
-                        Text("0x\(String(format: "%llX", function.address))")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.brightText)
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        Text("Size")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.subtleText)
-                        Text("\(function.size) bytes")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.brightText)
-                    }
-                    
-                    if let returnType = function.returnType {
-                        VStack(alignment: .leading) {
-                            Text("Returns")
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(WorkshopTheme.subtleText)
-                            Text(returnType)
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundColor(WorkshopTheme.brightText)
-                        }
-                    }
-                }
-            }
-
-            Divider().background(WorkshopTheme.cardBorder)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("CREATE PATCH")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(WorkshopTheme.subtleText)
-                
-                Picker("Patch Type", selection: $selectedPatchType) {
-                    ForEach(PatchType.allCases, id: \.self) { type in
-                        Text(type.rawValue.capitalized)
-                            .tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .tint(WorkshopTheme.neonGreen)
-
-                TextEditor(text: $customCode)
-                    .font(.system(size: 12, design: .monospaced))
-                    .padding(10)
-                    .background(WorkshopTheme.darkCard)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-                    )
-                    .foregroundColor(WorkshopTheme.brightText)
-                    .frame(minHeight: 100)
-
-                Button(action: { onPatch(selectedPatchType, customCode) }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "wrench.and.screwdriver.fill")
-                        Text("Generate Patch")
-                    }
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(WorkshopTheme.neonGreen)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
-                }
-            }
-        }
-        .padding(16)
-        .background(WorkshopTheme.deepBackground)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-        )
-    }
-}
-
-struct PatchDetailView: View {
-    let patch: PatchOperation
-
-    @State private var isApplied: Bool
-
-    init(patch: PatchOperation) {
-        self.patch = patch
-        _isApplied = State(initialValue: patch.isApplied)
+    private func resetHookCreator() {
+        hookClassName = ""
+        hookMethodName = ""
+        hookCallbackCode = "NSLog(@\"Hook executed\");"
+        isClassMethod = false
+        hookType = .before
     }
 
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: isApplied ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(isApplied ? WorkshopTheme.neonGreen : WorkshopTheme.subtleText)
-                            Text(patch.functionName)
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                                .foregroundColor(WorkshopTheme.brightText)
-                        }
-
-                        HStack(spacing: 16) {
-                            WorkshopBadge(text: patch.patchType.rawValue.capitalized, color: WorkshopTheme.hotPink)
-                            if let address = patch.address {
-                                Text("0x\(String(format: "%llX", address))")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(WorkshopTheme.subtleText)
-                            }
-                        }
-                    }
-
-                    Divider().background(WorkshopTheme.cardBorder)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("PATCH CODE")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.subtleText)
-                        
-                        Text(patch.patchedCode)
-                            .font(.system(size: 12, design: .monospaced))
-                            .padding(12)
-                            .background(WorkshopTheme.darkCard)
-                            .cornerRadius(8)
-                            .foregroundColor(WorkshopTheme.brightText)
-                            .textSelection(.enabled)
-                    }
-
-                    if let original = patch.originalCode {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("ORIGINAL")
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(WorkshopTheme.subtleText)
-                            
-                            Text(original)
-                                .font(.system(size: 11, design: .monospaced))
-                                .padding(12)
-                                .background(WorkshopTheme.darkCard)
-                                .cornerRadius(8)
-                                .foregroundColor(WorkshopTheme.subtleText)
-                        }
-                    }
-
-                    Divider().background(WorkshopTheme.cardBorder)
-
-                    HStack(spacing: 12) {
-                        Button(action: toggleApplied) {
-                            HStack(spacing: 6) {
-                                Image(systemName: isApplied ? "checkmark" : "arrow.clockwise")
-                                Text(isApplied ? "Applied" : "Apply Patch")
-                            }
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(isApplied ? WorkshopTheme.neonGreen : WorkshopTheme.cyberCyan)
-                            .foregroundColor(.black)
-                            .cornerRadius(8)
-                        }
-
-                        Button(action: copyCode) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "doc.on.doc")
-                                Text("Copy Code")
-                            }
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(WorkshopTheme.darkCard)
-                            .foregroundColor(WorkshopTheme.brightText)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-                            )
-                        }
-                    }
-                }
-                .padding(16)
-            }
-            .background(WorkshopTheme.deepBackground)
-            .navigationTitle("Patch Detail")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        // Dismiss
-                    }
-                    .foregroundColor(WorkshopTheme.subtleText)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-
-    private func toggleApplied() {
-        isApplied.toggle()
-        var updatedPatch = patch
-        updatedPatch.isApplied = isApplied
-        updatedPatch.appliedAt = isApplied ? Date() : nil
+    private func createInlineEdit() {
+        let addressValue = UInt64(inlineEditAddress.replacingOccurrences(of: "0x", with: ""), radix: 16) ?? 0
+        let originalBytesData = Data(hexString: inlineEditOriginalBytes) ?? Data()
+        let newBytesData = Data(hexString: inlineEditNewBytes) ?? Data()
         
-        if let index = BinaryPatchingService.shared.patches.firstIndex(where: { $0.id == patch.id }) {
-            BinaryPatchingService.shared.patches[index] = updatedPatch
+        if !newBytesData.isEmpty {
+            let edit = binaryService.createInlineEdit(
+                address: addressValue,
+                originalBytes: originalBytesData,
+                newBytes: newBytesData,
+                patchMode: inlineEditMode,
+                label: inlineEditLabel.isEmpty ? nil : inlineEditLabel
+            )
+            
+            // Clear and close
+            resetInlineEditCreator()
+            showInlineEditCreator = false
         }
     }
 
-    private func copyCode() {
-        #if os(iOS)
-        UIPasteboard.general.string = patch.patchedCode
-        #endif
+    private func resetInlineEditCreator() {
+        inlineEditAddress = ""
+        inlineEditOriginalBytes = ""
+        inlineEditNewBytes = ""
+        inlineEditLabel = ""
+        inlineEditMode = .absolute
     }
-}
 
-struct HookCreatorView: View {
-    @Binding var className: String
-    @Binding var methodName: String
-    @Binding var isClassMethod: Bool
-    @Binding var hookType: HookType
-    @Binding var callbackCode: String
-    
-    let onCreate: () -> Void
+    private func createBytePatch() {
+        let addressValue = UInt64(bytePatchAddress.replacingOccurrences(of: "0x", with: ""), radix: 16) ?? 0
+        let operandData = bytePatchOperand.isEmpty ? nil : Data(hexString: bytePatchOperand)
+        let valueValue = bytePatchValue.isEmpty ? nil : UInt64(bytePatchValue, radix: 16)
+        let sizeValue = Int(bytePatchSize) ?? 1
+        
+        let patch = binaryService.createBytePatch(
+            address: addressValue,
+            operation: bytePatchOperation,
+            operand: operandData,
+            value: valueValue,
+            size: sizeValue,
+            label: bytePatchLabel.isEmpty ? nil : bytePatchLabel
+        )
+        
+        // Clear and close
+        resetBytePatchCreator()
+        showBytePatchCreator = false
+    }
 
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("HOOK CONFIGURATION")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Class Name")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.subtleText)
-                        TextField("Enter class name", text: $className)
-                            .font(.system(size: 13, design: .monospaced))
-                            .textFieldStyle(.plain)
-                            .padding(10)
-                            .background(WorkshopTheme.darkCard)
-                            .cornerRadius(8)
-                            .foregroundColor(WorkshopTheme.brightText)
-                    }
+    private func resetBytePatchCreator() {
+        bytePatchAddress = ""
+        bytePatchOperand = ""
+        bytePatchValue = ""
+        bytePatchSize = "1"
+        bytePatchLabel = ""
+    }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Method Name")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(WorkshopTheme.subtleText)
-                        TextField("Enter method name", text: $methodName)
-                            .font(.system(size: 13, design: .monospaced))
-                            .textFieldStyle(.plain)
-                            .padding(10)
-                            .background(WorkshopTheme.darkCard)
-                            .cornerRadius(8)
-                            .foregroundColor(WorkshopTheme.brightText)
-                    }
-
-                    Toggle("Class Method", isOn: $isClassMethod)
-                        .font(.system(size: 12, design: .monospaced))
-                        .tint(WorkshopTheme.neonGreen)
-                }
-
-                Section(header: Text("HOOK TYPE")) {
-                    Picker("Hook Type", selection: $hookType) {
-                        ForEach(HookType.allCases, id: \.self) { type in
-                            Text(type.rawValue.capitalized)
-                                .tag(type)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .tint(WorkshopTheme.neonGreen)
-                }
-
-                Section(header: Text("CALLBACK CODE")) {
-                    TextEditor(text: $callbackCode)
-                        .font(.system(size: 12, design: .monospaced))
-                        .padding(10)
-                        .background(WorkshopTheme.darkCard)
-                        .cornerRadius(8)
-                        .foregroundColor(WorkshopTheme.brightText)
-                        .frame(minHeight: 120)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(WorkshopTheme.cardBorder, lineWidth: 1)
-                        )
-                }
-
-                Section {
-                    Button(action: onCreate) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Create Hook")
-                        }
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(WorkshopTheme.neonGreen)
-                        .foregroundColor(.black)
-                        .cornerRadius(8)
-                    }
-                    .disabled(className.isEmpty || methodName.isEmpty)
-                }
+    private func disassembleSelectedFunction() {
+        guard let funcToDisassemble = selectedFunction else { return }
+        
+        isDisassembling = true
+        Task {
+            do {
+                disassemblyInstructions = try await binaryService.disassembleFunction(funcToDisassemble)
+                showDisassembly = true
+            } catch {
+                print("Error disassembling: \(error)")
             }
-            .background(WorkshopTheme.deepBackground)
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Create Hook")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        // Dismiss
-                    }
-                    .foregroundColor(WorkshopTheme.subtleText)
-                }
-            }
+            isDisassembling = false
         }
-        .preferredColorScheme(.dark)
     }
 }

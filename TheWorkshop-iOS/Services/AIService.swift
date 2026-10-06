@@ -131,12 +131,32 @@ public struct FunctionPatchRequest: Codable {
     }
 }
 
-public enum PatchType: String, Codable {
+public enum PatchType: String, Codable, CaseIterable {
     case hook
     case replace
     case bypass
     case log
     case modifyReturn
+    case inlineEdit
+    case bytePatch
+    case nop
+    case call
+    case jump
+}
+
+public enum PatchMode: String, Codable, CaseIterable {
+    case absolute
+    case relative
+    case pointer
+}
+
+public enum BytePatchOperation: String, Codable {
+    case replace
+    case insert
+    case remove
+    case xor
+    case add
+    case subtract
 }
 
 public struct FunctionPatchResponse: Codable {
