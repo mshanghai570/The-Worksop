@@ -13,6 +13,8 @@ public enum StudioTab: String, CaseIterable, Identifiable {
     case explorer = "Package Explorer"
     case inspector = "Inspector"
     case assistant = "AI Mentor Review"
+    case binaryPatcher = "Binary Patcher"
+    case aiSettings = "AI Settings"
 
     public var id: String { rawValue }
 }
@@ -32,9 +34,13 @@ public class ProjectViewModel: ObservableObject {
     @Published public var isShowingBlueprintLibrary: Bool = false
     @Published public var isShowingExperimentValidation: Bool = false
     @Published public var isShowingTimelineDrawer: Bool = false
+    @Published public var isShowingBinaryPatcher: Bool = false
+    @Published public var isShowingAISettings: Bool = false
     @Published public var selectedPackageFileId: String = "logos-tweak-x"
 
     public let timelineService = TimelineService()
+    public let binaryPatchingService = BinaryPatchingService.shared
+    public let aiService = AIService.shared
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -204,5 +210,37 @@ public class ProjectViewModel: ObservableObject {
         case .nativeExtension:
             return ExtensionGenerator().generateCode(for: project)
         }
+    }
+
+    // MARK: - AI Integration
+
+    public func generateFunctionPatch(
+        functionName: String,
+        binaryPath: String,
+        patchType: PatchType,
+        newImplementation: String? = nil
+    ) async throws -> FunctionPatchResponse {
+        try await aiService.generateFunctionPatch(
+            functionName: functionName,
+            binaryPath: binaryPath,
+            patchType: patchType,
+            newImplementation: newImplementation
+        )
+    }
+
+    public func getAIConfiguration() -> AIConfiguration {
+        aiService.configuration
+    }
+
+    public func updateAIConfiguration(_ config: AIConfiguration) {
+        aiService.updateConfiguration(config)
+    }
+
+    public func loadAISettings() {
+        activeTab = .aiSettings
+    }
+
+    public func loadBinaryPatcher() {
+        activeTab = .binaryPatcher
     }
 }

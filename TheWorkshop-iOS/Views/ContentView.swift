@@ -50,21 +50,29 @@ public struct ContentView: View {
                 )
 
                 // Studio Navigation Tabs
-                HStack(spacing: 4) {
-                    TabButton(title: "Canvas", systemImage: "square.grid.2x2", isSelected: projectVM.activeTab == .canvas) {
-                        projectVM.activeTab = .canvas
-                    }
-                    TabButton(title: "Split Code", systemImage: "curlybraces", isSelected: projectVM.activeTab == .code) {
-                        projectVM.activeTab = .code
-                    }
-                    TabButton(title: "Explorer", systemImage: "folder.fill", isSelected: projectVM.activeTab == .explorer) {
-                        projectVM.activeTab = .explorer
-                    }
-                    TabButton(title: "Inspector", systemImage: "slider.horizontal.3", isSelected: projectVM.activeTab == .inspector) {
-                        projectVM.activeTab = .inspector
-                    }
-                    TabButton(title: "AI Mentor", systemImage: "sparkles", isSelected: projectVM.activeTab == .assistant) {
-                        projectVM.activeTab = .assistant
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        TabButton(title: "Canvas", systemImage: "square.grid.2x2", isSelected: projectVM.activeTab == .canvas) {
+                            projectVM.activeTab = .canvas
+                        }
+                        TabButton(title: "Split Code", systemImage: "curlybraces", isSelected: projectVM.activeTab == .code) {
+                            projectVM.activeTab = .code
+                        }
+                        TabButton(title: "Explorer", systemImage: "folder.fill", isSelected: projectVM.activeTab == .explorer) {
+                            projectVM.activeTab = .explorer
+                        }
+                        TabButton(title: "Inspector", systemImage: "slider.horizontal.3", isSelected: projectVM.activeTab == .inspector) {
+                            projectVM.activeTab = .inspector
+                        }
+                        TabButton(title: "AI Mentor", systemImage: "sparkles", isSelected: projectVM.activeTab == .assistant) {
+                            projectVM.activeTab = .assistant
+                        }
+                        TabButton(title: "Binary", systemImage: "binarycoding", isSelected: projectVM.activeTab == .binaryPatcher) {
+                            projectVM.activeTab = .binaryPatcher
+                        }
+                        TabButton(title: "AI Settings", systemImage: "gearshape.fill", isSelected: projectVM.activeTab == .aiSettings) {
+                            projectVM.activeTab = .aiSettings
+                        }
                     }
                 }
             }
@@ -105,6 +113,12 @@ public struct ContentView: View {
 
                 case .assistant:
                     GeminiAssistantView(projectVM: projectVM)
+
+                case .binaryPatcher:
+                    BinaryPatcherView()
+
+                case .aiSettings:
+                    AISettingsView()
                 }
 
                 // Status Toast Overlay

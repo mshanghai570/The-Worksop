@@ -1,7 +1,7 @@
 //
 //  Services/GeminiAPIService.swift
 //  TheWorkshop-iOS
-//  AI Workshop Assistant Integration
+//  Legacy AI Workshop Assistant Integration (now uses AIService)
 //
 
 import Foundation
@@ -14,64 +14,171 @@ public struct AIGeneratedBlocksResponse: Codable {
 public class GeminiAPIService {
     public static let shared = GeminiAPIService()
 
+    private let aiService = AIService.shared
+    private let binaryPatchingService = BinaryPatchingService.shared
+
     private init() {}
 
     public func askWorkshopAI(prompt: String, project: Project) async throws -> String {
-        // Simulates query to backend Gemini endpoint
-        try await Task.sleep(nanoseconds: 800_000_000)
-
-        if prompt.lowercased().contains("jailbreak") || prompt.lowercased().contains("jailed") {
-            return """
-            🛡️ **Jailbreak vs. Jailed Mod Capabilities**:
-            
-            1. **Jailbreak Tweaks (Theos/Substrate)**:
-               - Hooks process memory directly using Objective-C runtime `%hook`.
-               - Accesses system daemons like `SpringBoard`, `backboardd`, or system frameworks.
-               - Unlimited runtime customization.
-            
-            2. **Jailed IPA Patching**:
-               - Operates strictly inside sandboxed App Bundle boundaries.
-               - Swaps resources (`Assets.car`, images, audio), modifies `Info.plist`, or injects dylibs via Azule/Sidestore.
-               - No root privileges required.
-            """
+        // Check if AI is configured
+        guard aiService.configuration.isConfigured else {
+            return "AI provider not configured. Please set up your OpenAI-compatible endpoint in Settings > AI Configuration."
         }
 
-        return "I can help you build Logos hooks or generate custom block layouts for \(project.name). Try asking to create a SpringBoard lockscreen hook!"
+        let systemPrompt = """
+        You are an experienced iOS reverse engineer and tweak developer.
+        Help the user with The Workshop, a visual reverse engineering tool for iPhone.
+        Provide guidance on:
+        - Logos syntax and Theos tweak development
+        - Hooking Objective-C methods
+        - Binary patching techniques
+        - Memory safety in tweaks
+        - Debugging and troubleshooting
+        
+        Be concise and provide actionable advice.
+        """
+
+        let userPrompt = """
+        User Question: \(prompt)
+        
+        Current Project: \(project.name)
+        Target Type: \(project.projectType.displayName)
+        Target Process: \(project.targetProcess)
+        
+        Current Blocks on Canvas:
+        \(project.blocks.map { "- \($0.type.rawValue): \($0.targetClass ?? $0.targetMethod ?? $0.message ?? "")" }.joined(separator: "\n"))
+        """
+
+        let messages = [
+            AIChatMessage(role: "system", content: systemPrompt),
+            AIChatMessage(role: "user", content: userPrompt)
+        ]
+
+        let response = try await aiService.sendChatMessage(messages: messages)
+        
+        guard let choice = response.choices.first else {
+            return "No response from AI provider."
+        }
+
+        return choice.message.content
     }
 
     public func generateBlocks(prompt: String, project: Project) async throws -> AIGeneratedBlocksResponse {
-        try await Task.sleep(nanoseconds: 1_200_000_000)
+        // Check if AI is configured
+        guard aiService.configuration.isConfigured else {
+            return AIGeneratedBlocksResponse(
+                explanation: "AI provider not configured",
+                blocks: []
+            )
+        }
 
-        let hookBlock = Block(
-            type: .hook,
-            x: 80,
-            y: 80,
-            targetClass: "SBLockScreenManager",
-            targetMethod: "lockUIFromSource:withOptions:",
-            returnType: "void",
-            childrenBlockIds: ["block-delay-01"]
-        )
+        let systemPrompt = """
+        You are an expert iOS tweak developer. Generate visual block layouts for The Workshop.
+        Each block should have a type and configuration properties.
+        
+        Available block types:
+        - hook: Objective-C method hook
+        - orig: Call original implementation
+        - log: Console log message
+        - modifyProperty: Set property value
+        - conditional: If condition
+        - delay: Thread delay
+        - notification: Show HUD banner
+        - returnValue: Override return value
+        - customLogos: Raw Logos code
+        - replaceAsset: Replace IPA asset
+        - editPlist: Modify Info.plist
+        - swiftuiView: Native SwiftUI view
+        
+        Respond with JSON format:
+        {
+            "explanation": "Brief description of generated blocks",
+            "blocks": [
+                {
+                    "type": "hook",
+                    "targetClass": "ClassName",
+                    "targetMethod": "methodName",
+                    "returnType": "void",
+                    "x": 100,
+                    "y": 100
+                }
+            ]
+        }
+        """
 
-        let delayBlock = Block(
-            id: "block-delay-01",
-            type: .delay,
-            x: 80,
-            y: 220,
-            durationSeconds: 2.0,
-            childrenBlockIds: ["block-log-01"]
-        )
+        let userPrompt = """
+        Generate blocks for: \(prompt)
+        
+        Current Project: \(project.name)
+        Target Type: \(project.projectType.displayName)
+        """
 
-        let logBlock = Block(
-            id: "block-log-01",
-            type: .log,
-            x: 80,
-            y: 340,
-            message: "Lockscreen triggered via AI hook node"
-        )
+        let messages = [
+            AIChatMessage(role: "system", content: systemPrompt),
+            AIChatMessage(role: "user", content: userPrompt)
+        ]
+
+        let response = try await aiService.sendChatMessage(messages: messages)
+        
+        guard let choice = response.choices.first else {
+            return AIGeneratedBlocksResponse(explanation: "No response", blocks: [])
+        }
+
+        // Try to parse the response
+        let jsonString = choice.message.content
+        
+        if let data = jsonString.data(using: .utf8) {
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(AIGeneratedBlocksResponse.self, from: data)
+                return response
+            } catch {
+                // Return fallback
+                return AIGeneratedBlocksResponse(
+                    explanation: choice.message.content,
+                    blocks: []
+                )
+            }
+        }
 
         return AIGeneratedBlocksResponse(
-            explanation: "Generated a 3-node hook chain for `SBLockScreenManager` with a 2-second delay and NSLog output.",
-            blocks: [hookBlock, delayBlock, logBlock]
+            explanation: choice.message.content,
+            blocks: []
         )
+    }
+
+    // MARK: - Function Patching Methods
+
+    public func generateFunctionPatch(
+        functionName: String,
+        binaryPath: String,
+        patchType: PatchType,
+        newImplementation: String? = nil,
+        hookBefore: Bool = true,
+        hookAfter: Bool = true,
+        context: String? = nil
+    ) async throws -> FunctionPatchResponse {
+        try await binaryPatchingService.generatePatch(
+            for: functionName,
+            patchType: patchType,
+            newCode: newImplementation
+        )
+    }
+
+    public func analyzeBinary(at path: String) async throws -> BinaryInfo {
+        try await binaryPatchingService.loadBinary(at: path)
+        return binaryPatchingService.loadedBinary!
+    }
+
+    public func searchFunctions(query: String) -> [BinaryFunction] {
+        binaryPatchingService.searchFunctions(query: query)
+    }
+
+    public func getLoadedBinary() -> BinaryInfo? {
+        binaryPatchingService.loadedBinary
+    }
+
+    public func generateLogosCodeForPatches() -> String {
+        binaryPatchingService.generateLogosCode()
     }
 }
