@@ -1,0 +1,55 @@
+# Dependencies
+# Swift Package Manager
+Packages/
+Package.resolved
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+*.xcscheme
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcworkspace/
+
+# Build
+build/
+DerivedData/
+
+# Simulator
+*.simulatorstate
+
+# User data
+UserDefaults.plist
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+*.xctest/
+*.xctestplan/
+
+# Archives
+*.zip
+*.tar.gz
+*.dmg
+
+# App
+*.app
+*.ipa

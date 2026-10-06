@@ -1,0 +1,309 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objects = {
+		B6468445251017D1008C8A80 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			name = TheWorkshopApp.swift;
+			path = TheWorkshop-iOS/App/TheWorkshopApp.swift;
+			sourceRoot = ..;
+			fileEncoding = 4;
+		};
+		B6468446251017D1008C8A80 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			name = ContentView.swift;
+			path = TheWorkshop-iOS/Views/ContentView.swift;
+			sourceRoot = ..;
+			fileEncoding = 4;
+		};
+		B6468447251017D1008C8A80 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			name = ProjectViewModel.swift;
+			path = TheWorkshop-iOS/ViewModels/ProjectViewModel.swift;
+			sourceRoot = ..;
+			fileEncoding = 4;
+		};
+		B6468448251017D1008C8A80 = {
+			isa = PBXGroup;
+			children = (
+				B6468445251017D1008C8A80,
+				B6468446251017D1008C8A80,
+				B6468447251017D1008C8A80,
+			);
+			name = TheWorkshop-iOS;
+			sourceRoot = ..;
+		};
+
+		B6468449251017D1008C8A80 = {
+			isa = PBXGroup;
+			children = (
+				B6468448251017D1008C8A80,
+			);
+			name = TheWorkshop;
+			sourceRoot = ;
+		};
+
+		B646844A251017D1008C8A80 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B646844B251017D1008C8A80;
+			buildPhases = (
+				B646844C251017D1008C8A80,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TheWorkshop;
+			productName = TheWorkshop;
+			productReference = B646844D251017D1008C8A80;
+			productType = "com.apple.product-type.application";
+		};
+
+		B646844B251017D1008C8A80 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B646844E251017D1008C8A80,
+				B646844F251017D1008C8A80,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		B646844C251017D1008C8A80 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B6468450251017D1008C8A80,
+				B6468451251017D1008C8A80,
+				B6468452251017D1008C8A80,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		B646844D251017D1008C8A80 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			includeInIndex = 1;
+			name = TheWorkshop.app;
+			path = TheWorkshop.app;
+			productReference = B646844A251017D1008C8A80;
+			productType = "com.apple.product-type.application";
+		};
+
+		B646844E251017D1008C8A80 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_MODELING = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD = YES;
+				COPY_HEADERS_RUN_UNIFDEFINED = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+
+		B646844F251017D1008C8A80 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_MODELING = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD = YES;
+				COPY_HEADERS_RUN_UNIFDEFINED = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+
+		B6468450251017D1008C8A80 = {
+			isa = PBXBuildFile;
+			fileRef = B6468445251017D1008C8A80;
+		};
+		B6468451251017D1008C8A80 = {
+			isa = PBXBuildFile;
+			fileRef = B6468446251017D1008C8A80;
+		};
+		B6468452251017D1008C8A80 = {
+			isa = PBXBuildFile;
+			fileRef = B6468447251017D1008C8A80;
+		};
+
+		B6468453251017D1008C8A80 = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1300;
+				LastUpgradeVersion = 1300;
+				TargetAttributes = {
+					B646844A251017D1008C8A80 = {
+						CreatedOnToolsVersion = 13.0;
+					};
+				};
+			};
+			buildConfigurationList = B6468454251017D1008C8A80;
+			compatibilityVersion = "Xcode 13.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = B6468449251017D1008C8A80;
+			productRefGroup = B6468455251017D1008C8A80;
+			projectDirPath = ;
+			projectRoot = ;
+			sharedFrameworkSchemeFile = ;
+			targets = (
+				B646844A251017D1008C8A80,
+			);
+		};
+
+		B6468454251017D1008C8A80 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6468456251017D1008C8A80,
+				B6468457251017D1008C8A80,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		B6468455251017D1008C8A80 = {
+			isa = PBXGroup;
+			children = (
+				B646844D251017D1008C8A80,
+			);
+			name = Products;
+			sourceRoot = ;
+		};
+
+		B6468456251017D1008C8A80 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
+				CLANG_ANALYZER_LOCALIZATION_NONNULL = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_BITCODE = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "TheWorkshop-iOS/App/Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifestGeneration = YES;
+				INFOPLIST_KEY_UILaunchScreenGeneration = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.theworkshop.app;
+				PRODUCT_NAME = TheWorkshop;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				UI_LAUNCH_STORYBOARD_NAME = LaunchScreen;
+			};
+			name = Debug;
+		};
+
+		B6468457251017D1008C8A80 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
+				CLANG_ANALYZER_LOCALIZATION_NONNULL = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_BITCODE = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "TheWorkshop-iOS/App/Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifestGeneration = YES;
+				INFOPLIST_KEY_UILaunchScreenGeneration = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.theworkshop.app;
+				PRODUCT_NAME = TheWorkshop;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				UI_LAUNCH_STORYBOARD_NAME = LaunchScreen;
+			};
+			name = Release;
+		};
+	};
+	rootObject = B6468453251017D1008C8A80;
+}
