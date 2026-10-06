@@ -70,6 +70,9 @@ public struct ContentView: View {
                         TabButton(title: "Binary", systemImage: "binarycoding", isSelected: projectVM.activeTab == .binaryPatcher) {
                             projectVM.activeTab = .binaryPatcher
                         }
+                        TabButton(title: "AI Agent", systemImage: "person.crop.circle", isSelected: projectVM.activeTab == .agent) {
+                            projectVM.activeTab = .agent
+                        }
                         TabButton(title: "AI Settings", systemImage: "gearshape.fill", isSelected: projectVM.activeTab == .aiSettings) {
                             projectVM.activeTab = .aiSettings
                         }
@@ -116,6 +119,9 @@ public struct ContentView: View {
 
                 case .binaryPatcher:
                     BinaryPatcherView()
+
+                case .agent:
+                    AIAgentView()
 
                 case .aiSettings:
                     AISettingsView()

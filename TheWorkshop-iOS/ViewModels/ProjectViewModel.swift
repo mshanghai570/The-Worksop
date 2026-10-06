@@ -14,6 +14,7 @@ public enum StudioTab: String, CaseIterable, Identifiable {
     case inspector = "Inspector"
     case assistant = "AI Mentor Review"
     case binaryPatcher = "Binary Patcher"
+    case agent = "AI Agent"
     case aiSettings = "AI Settings"
 
     public var id: String { rawValue }
@@ -41,6 +42,7 @@ public class ProjectViewModel: ObservableObject {
     public let timelineService = TimelineService()
     public let binaryPatchingService = BinaryPatchingService.shared
     public let aiService = AIService.shared
+    public let agentService = AIAgentService.shared
 
     private var cancellables = Set<AnyCancellable>()
 
